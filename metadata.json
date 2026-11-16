@@ -1,0 +1,6 @@
+{
+  "name": "Maison Séren — Haute Parfumerie",
+  "description": "Luxury artisanal fragrances crafted with rare botanicals. Explore signature Eau de Parfum and Extrait de Parfum collections.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
