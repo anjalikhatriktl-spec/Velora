@@ -9,14 +9,14 @@ import {
   ShoppingBag,
   Smartphone,
 } from 'lucide-react';
-import { formatINR, PRODUCTS } from '../data/catalog';
+import { formatINR } from '../data/catalog';
 import { getVolumePrice, useStore } from '../context/StoreContext';
 import { CodPaymentOption, CustomerDetails } from '../types';
 import { SafeImage } from '../components/SafeImage';
 import { VeloraLogo } from '../components/VeloraLogo';
 
 export const CheckoutPage: React.FC = () => {
-  const { cart, cartSubtotal, placeOrder, navigate } = useStore();
+  const { products, publicSettings, cart, cartSubtotal, placeOrder, navigate } = useStore();
 
   const [customer, setCustomer] = useState<CustomerDetails>({
     fullName: '',
@@ -33,7 +33,10 @@ export const CheckoutPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const shippingFee = cartSubtotal >= 2500 || cartSubtotal === 0 ? 0 : 149;
+  const shippingFee =
+    cartSubtotal >= publicSettings.freeShippingThreshold || cartSubtotal === 0
+      ? 0
+      : publicSettings.standardShippingFee;
   const grandTotal = cartSubtotal + shippingFee;
 
   if (cart.length === 0) {
@@ -398,7 +401,7 @@ export const CheckoutPage: React.FC = () => {
 
               <div className="divide-y divide-[#E6DDD1] max-h-80 overflow-y-auto pr-1">
                 {cart.map((item) => {
-                  const product = PRODUCTS.find((p) => p.id === item.productId);
+                  const product = products.find((p) => p.id === item.productId);
                   if (!product) return null;
                   const price = getVolumePrice(product, item.volume);
 

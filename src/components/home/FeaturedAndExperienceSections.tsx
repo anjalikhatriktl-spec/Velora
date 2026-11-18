@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ArrowRight } from 'lucide-react';
-import { BRAND_MEDIA, PRODUCTS } from '../../data/catalog';
+import { BRAND_MEDIA } from '../../data/catalog';
 import { useStore } from '../../context/StoreContext';
 import { ProductCard } from '../ProductCard';
 import { SafeImage } from '../SafeImage';
@@ -14,8 +14,12 @@ import {
 } from '../MotionPrimitives';
 
 export const FeaturedAndExperienceSections: React.FC = () => {
-  const { navigate } = useStore();
-  const featuredProducts = useMemo(() => PRODUCTS.filter((p) => p.featured), []);
+  const { navigate, products } = useStore();
+  const featuredProducts = useMemo(() => {
+    const active = products.filter((p) => p.published !== false);
+    const featured = active.filter((p) => p.featured);
+    return featured.length > 0 ? featured : active.slice(0, 3);
+  }, [products]);
 
   return (
     <>

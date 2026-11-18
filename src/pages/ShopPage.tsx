@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { formatINR, PRODUCTS } from '../data/catalog';
+import { formatINR } from '../data/catalog';
 import { useStore } from '../context/StoreContext';
 import { FragranceCategory } from '../types';
 import { ProductCard } from '../components/ProductCard';
@@ -8,16 +8,11 @@ import { FadeUp } from '../components/MotionPrimitives';
 
 type SortOption = 'featured' | 'price-asc' | 'price-desc' | 'rating';
 
-const CATEGORIES: (FragranceCategory | 'All')[] = [
-  'All',
-  'Floral',
-  'Fresh',
-  'Woody',
-  'Oriental',
-];
-
 export const ShopPage: React.FC = () => {
   const {
+    products,
+    categories,
+    publicSettings,
     shopCategoryFilter,
     setShopCategoryFilter,
     shopSearchQuery,
@@ -27,10 +22,24 @@ export const ShopPage: React.FC = () => {
   const [sortBy, setSortBy] = useState<SortOption>('featured');
   const [maxPrice, setMaxPrice] = useState<number>(5000);
 
+  const categoryTabs = useMemo(() => {
+    const activeCats = categories
+      .filter((c) => c.active)
+      .map((c) => c.name as FragranceCategory);
+    const fallback: FragranceCategory[] = ['Floral', 'Fresh', 'Woody', 'Oriental'];
+    const list = activeCats.length > 0 ? activeCats : fallback;
+    return ['All', ...list] as (FragranceCategory | 'All')[];
+  }, [categories]);
+
+  const publishedProducts = useMemo(
+    () => products.filter((p) => p.published !== false),
+    [products]
+  );
+
   const filteredProducts = useMemo(() => {
     const q = shopSearchQuery.trim().toLowerCase();
 
-    const list = PRODUCTS.filter((p) => {
+    const list = publishedProducts.filter((p) => {
       if (shopCategoryFilter !== 'All' && p.category !== shopCategoryFilter) return false;
       if (p.price > maxPrice) return false;
       if (q) {
@@ -60,7 +69,7 @@ export const ShopPage: React.FC = () => {
       return [...list].sort((a, b) => b.rating - a.rating);
     }
     return list;
-  }, [shopCategoryFilter, shopSearchQuery, maxPrice, sortBy]);
+  }, [publishedProducts, shopCategoryFilter, shopSearchQuery, maxPrice, sortBy]);
 
   const resetFilters = () => {
     setShopCategoryFilter('All');
@@ -82,7 +91,8 @@ export const ShopPage: React.FC = () => {
           </h1>
           <p className="text-sm sm:text-base text-[#6E655E] leading-relaxed">
             Explore small-batch Eau de Parfum and Extrait de Parfum flacons priced from ₹999
-            (30ml) to ₹4,999 (100ml). Complimentary shipping on orders above ₹2,500.
+            (30ml) to ₹4,999 (100ml). Complimentary shipping on orders above{' '}
+            {formatINR(publicSettings.freeShippingThreshold)}.
           </p>
         </FadeUp>
 
@@ -91,7 +101,7 @@ export const ShopPage: React.FC = () => {
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             {/* Category Tabs */}
             <div className="flex flex-wrap items-center gap-2">
-              {CATEGORIES.map((cat) => {
+              {categoryTabs.map((cat) => {
                 const active = shopCategoryFilter === cat;
                 return (
                   <button
@@ -175,7 +185,7 @@ export const ShopPage: React.FC = () => {
 
             <div className="flex items-center justify-between sm:justify-end gap-4">
               <span className="tabular-nums">
-                Showing {filteredProducts.length} of {PRODUCTS.length} fragrances
+                Showing {filteredProducts.length} of {publishedProducts.length} fragrances
               </span>
               {(shopCategoryFilter !== 'All' ||
                 shopSearchQuery ||

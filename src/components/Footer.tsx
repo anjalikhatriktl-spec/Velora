@@ -5,12 +5,12 @@ import { FragranceCategory } from '../types';
 import { VeloraLogo } from './VeloraLogo';
 
 export const Footer: React.FC = () => {
-  const { navigate, notify } = useStore();
+  const { navigate, notify, websiteContent } = useStore();
   const [email, setEmail] = useState('');
   const [subscribed, setSubscribed] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmed = email.trim();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
@@ -18,6 +18,15 @@ export const Footer: React.FC = () => {
       return;
     }
     setError('');
+    try {
+      await fetch('/api/storefront/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: trimmed }),
+      });
+    } catch {
+      // ignore offline error
+    }
     setSubscribed(true);
     setEmail('');
     notify('Welcome to the world of VELORA.');
@@ -40,8 +49,7 @@ export const Footer: React.FC = () => {
               <VeloraLogo tone="light" size="md" />
             </button>
             <p className="text-sm text-[#B7AEA4] leading-relaxed max-w-sm">
-              VELORA brings you an exclusive fragrance experience crafted for those who appreciate
-              elegance, luxury and individuality.
+              {websiteContent.footerDescription}
             </p>
             <p className="text-xs tracking-[0.2em] uppercase text-[#B8935A]">
               Discover Your Signature Scent.
@@ -144,9 +152,9 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
 
-          {/* Shop Categories */}
+          {/* Shop Categories + Staff Portals */}
           <div className="lg:col-span-2 space-y-4">
-            <h3 className="font-serif text-lg tracking-wide text-[#FAF8F4]">Olfactory Families</h3>
+            <h3 className="font-serif text-lg tracking-wide text-[#FAF8F4]">Olfactory &amp; Portals</h3>
             <ul className="space-y-2.5 text-sm text-[#B7AEA4]">
               {categories.map((cat) => (
                 <li key={cat}>
@@ -168,13 +176,37 @@ export const Footer: React.FC = () => {
                   Saved Wishlist
                 </button>
               </li>
+              <li className="pt-2 border-t border-[#2B2623]">
+                <a
+                  href="/admin/login"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('admin-login');
+                  }}
+                  className="text-[#E6DDD1] hover:text-[#B8935A] transition-colors font-medium"
+                >
+                  Admin Login
+                </a>
+              </li>
+              <li>
+                <a
+                  href="/employee/login"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    navigate('employee-login');
+                  }}
+                  className="text-[#E6DDD1] hover:text-[#B8935A] transition-colors font-medium"
+                >
+                  Employee Login
+                </a>
+              </li>
             </ul>
           </div>
 
           {/* Contact & Newsletter */}
           <div className="lg:col-span-4 space-y-5">
             <h3 className="font-serif text-lg tracking-wide text-[#FAF8F4]">
-              Stay in the World of VELORA
+              {websiteContent.newsletterHeading}
             </h3>
             <p className="text-sm text-[#B7AEA4] leading-relaxed">
               Receive private invitations to limited harvest releases, scent stories, and bespoke
@@ -215,15 +247,15 @@ export const Footer: React.FC = () => {
             <div className="pt-2 space-y-2 text-xs text-[#B7AEA4]">
               <div className="flex items-start gap-2.5">
                 <MapPin className="w-3.5 h-3.5 text-[#B8935A] mt-0.5 shrink-0" />
-                <span>14 Kala Ghoda Precinct, Fort, Mumbai 400001</span>
+                <span>{websiteContent.boutiqueAddress}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="w-3.5 h-3.5 text-[#B8935A] shrink-0" />
-                <span className="tabular-nums">+91 22 4890 3172</span>
+                <span className="tabular-nums">{websiteContent.contactPhone}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="w-3.5 h-3.5 text-[#B8935A] shrink-0" />
-                <span className="break-all">concierge@velorafragrances.in</span>
+                <span className="break-all">{websiteContent.contactEmail}</span>
               </div>
             </div>
           </div>
@@ -231,7 +263,31 @@ export const Footer: React.FC = () => {
 
         <div className="mt-14 pt-7 border-t border-[#2B2623] flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8A8076]">
           <p>© {new Date().getFullYear()} VELORA Parfums. All rights reserved.</p>
-          <p>Every Scent Tells a Story · Cash on Delivery Available Across India</p>
+          <div className="flex flex-wrap items-center justify-center gap-4">
+            <a
+              href="/admin/login"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('admin-login');
+              }}
+              className="text-[#B8935A] hover:text-[#FAF8F4] transition-colors"
+            >
+              Admin Login
+            </a>
+            <span aria-hidden="true">·</span>
+            <a
+              href="/employee/login"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate('employee-login');
+              }}
+              className="text-[#B8935A] hover:text-[#FAF8F4] transition-colors"
+            >
+              Employee Login
+            </a>
+            <span aria-hidden="true">·</span>
+            <span>Every Scent Tells a Story · Cash on Delivery Across India</span>
+          </div>
         </div>
       </div>
     </footer>

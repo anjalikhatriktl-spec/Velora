@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { ArrowRight, Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { formatINR, PRODUCTS } from '../data/catalog';
+import { formatINR } from '../data/catalog';
 import { getVolumePrice, useStore } from '../context/StoreContext';
 import { SafeImage } from './SafeImage';
 import { LUXURY_EASE } from './MotionPrimitives';
@@ -9,6 +9,8 @@ import { VeloraLogo } from './VeloraLogo';
 
 export const CartDrawer: React.FC = () => {
   const {
+    products,
+    publicSettings,
     cart,
     isCartOpen,
     setCartOpen,
@@ -27,7 +29,7 @@ export const CartDrawer: React.FC = () => {
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [isCartOpen, setCartOpen]);
 
-  const freeShippingThreshold = 2500;
+  const freeShippingThreshold = publicSettings.freeShippingThreshold;
   const remainingForFree = Math.max(0, freeShippingThreshold - cartSubtotal);
   const progressPct = Math.min(100, Math.round((cartSubtotal / freeShippingThreshold) * 100));
 
@@ -113,7 +115,7 @@ export const CartDrawer: React.FC = () => {
                 </div>
               ) : (
                 cart.map((item) => {
-                  const product = PRODUCTS.find((p) => p.id === item.productId);
+                  const product = products.find((p) => p.id === item.productId);
                   if (!product) return null;
                   const unitPrice = getVolumePrice(product, item.volume);
 
@@ -209,7 +211,9 @@ export const CartDrawer: React.FC = () => {
                   <div className="flex items-center justify-between text-[#6E655E]">
                     <span>Delivery</span>
                     <span className="tabular-nums">
-                      {remainingForFree === 0 ? 'Complimentary' : formatINR(149)}
+                      {remainingForFree === 0
+                        ? 'Complimentary'
+                        : formatINR(publicSettings.standardShippingFee)}
                     </span>
                   </div>
                 </div>

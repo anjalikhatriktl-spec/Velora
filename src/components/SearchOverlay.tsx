@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Search, X } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
-import { formatINR, PRODUCTS } from '../data/catalog';
+import { formatINR } from '../data/catalog';
 import { useStore } from '../context/StoreContext';
 import { SafeImage } from './SafeImage';
 import { LUXURY_EASE } from './MotionPrimitives';
 
 export const SearchOverlay: React.FC = () => {
-  const { isSearchOpen, setSearchOpen, navigate } = useStore();
+  const { products, isSearchOpen, setSearchOpen, navigate } = useStore();
   const [query, setQuery] = useState('');
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -27,9 +27,10 @@ export const SearchOverlay: React.FC = () => {
   }, [isSearchOpen, setSearchOpen]);
 
   const results = useMemo(() => {
+    const active = products.filter((p) => p.published !== false);
     const q = query.trim().toLowerCase();
-    if (!q) return PRODUCTS.slice(0, 4);
-    return PRODUCTS.filter((p) => {
+    if (!q) return active.slice(0, 4);
+    return active.filter((p) => {
       const haystack = [
         p.name,
         p.subtitle,
@@ -43,7 +44,7 @@ export const SearchOverlay: React.FC = () => {
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [query]);
+  }, [products, query]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

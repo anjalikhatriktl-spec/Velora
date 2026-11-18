@@ -38,7 +38,9 @@ const testimonialVariants = {
 };
 
 export const TestimonialsContactBlogSections: React.FC = () => {
-  const { setActiveArticle, notify } = useStore();
+  const { setActiveArticle, notify, websiteContent } = useStore();
+  const testimonials = websiteContent.testimonials;
+  const blogArticles = websiteContent.blogArticles;
   const [[testimonialIdx, testimonialDir], setTestimonialState] = useState<[number, number]>([
     0, 1,
   ]);
@@ -48,16 +50,20 @@ export const TestimonialsContactBlogSections: React.FC = () => {
   const [errors, setErrors] = useState<Partial<typeof form>>({});
   const [submitted, setSubmitted] = useState(false);
 
-  const activeTestimonial = TESTIMONIALS[testimonialIdx];
+  const safeIdx = testimonials.length > 0 ? testimonialIdx % testimonials.length : 0;
+  const activeTestimonial = testimonials[safeIdx];
 
   const handleNextTestimonial = () =>
-    setTestimonialState(([prev]) => [(prev + 1) % TESTIMONIALS.length, 1]);
+    setTestimonialState(([prev]) => [(prev + 1) % Math.max(1, testimonials.length), 1]);
   const handlePrevTestimonial = () =>
-    setTestimonialState(([prev]) => [(prev - 1 + TESTIMONIALS.length) % TESTIMONIALS.length, -1]);
+    setTestimonialState(([prev]) => [
+      (prev - 1 + Math.max(1, testimonials.length)) % Math.max(1, testimonials.length),
+      -1,
+    ]);
   const handleJumpTestimonial = (idx: number) =>
     setTestimonialState(([prev]) => [idx, idx >= prev ? 1 : -1]);
 
-  const handleContactSubmit = (e: React.FormEvent) => {
+  const handleContactSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const newErrors: Partial<typeof form> = {};
     if (form.name.trim().length < 2) newErrors.name = 'Please enter your full name.';
@@ -74,6 +80,15 @@ export const TestimonialsContactBlogSections: React.FC = () => {
     }
 
     setErrors({});
+    try {
+      await fetch('/api/storefront/enquiries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      });
+    } catch {
+      // ignore offline error
+    }
     setSubmitted(true);
     setForm({ name: '', email: '', phone: '', message: '' });
     notify('Your message has been received by our Atelier Concierge.');
@@ -158,14 +173,14 @@ export const TestimonialsContactBlogSections: React.FC = () => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <div className="flex items-center gap-2">
-                {TESTIMONIALS.map((t, idx) => (
+                {testimonials.map((t, idx) => (
                   <button
                     key={t.id}
                     type="button"
                     onClick={() => handleJumpTestimonial(idx)}
                     aria-label={`Read testimonial from ${t.name}`}
                     className={`h-2 transition-all duration-300 ${
-                      idx === testimonialIdx ? 'w-8 bg-[#181614]' : 'w-2.5 bg-[#D8CEC0] hover:bg-[#9A7742]'
+                      idx === safeIdx ? 'w-8 bg-[#181614]' : 'w-2.5 bg-[#D8CEC0] hover:bg-[#9A7742]'
                     }`}
                   />
                 ))}
@@ -208,28 +223,28 @@ export const TestimonialsContactBlogSections: React.FC = () => {
                   <MapPin className="w-4 h-4 text-[#9A7742] mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-[#181614]">VELORA Mumbai Flagship Boutique</p>
-                    <p className="text-[#6E655E]">14 Kala Ghoda Precinct, Fort, Mumbai 400001</p>
+                    <p className="text-[#6E655E]">{websiteContent.boutiqueAddress}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Phone className="w-4 h-4 text-[#9A7742] mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-[#181614]">Concierge Telephone</p>
-                    <p className="text-[#6E655E] tabular-nums">+91 22 4890 3172</p>
+                    <p className="text-[#6E655E] tabular-nums">{websiteContent.contactPhone}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Mail className="w-4 h-4 text-[#9A7742] mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-[#181614]">Direct Correspondence</p>
-                    <p className="text-[#6E655E] break-all">concierge@velorafragrances.in</p>
+                    <p className="text-[#6E655E] break-all">{websiteContent.contactEmail}</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3">
                   <Clock className="w-4 h-4 text-[#9A7742] mt-1 shrink-0" />
                   <div>
                     <p className="font-medium text-[#181614]">Atelier Hours</p>
-                    <p className="text-[#6E655E]">Monday – Saturday · 10:00 – 20:00 IST</p>
+                    <p className="text-[#6E655E]">{websiteContent.boutiqueHours}</p>
                   </div>
                 </div>
               </div>
@@ -378,7 +393,7 @@ export const TestimonialsContactBlogSections: React.FC = () => {
           </FadeUp>
 
           <StaggerContainer className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-            {BLOG_ARTICLES.map((article) => (
+            {blogArticles.map((article) => (
               <StaggerItem key={article.id}>
                 <motion.article
                   whileHover={{ y: -4 }}

@@ -1,16 +1,27 @@
-import React, { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
-import { PRODUCTS } from '../data/catalog';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { BLOG_ARTICLES, PRODUCTS as DEFAULT_PRODUCTS, TESTIMONIALS } from '../data/catalog';
+import { resolveMediaUrl } from '../lib/mediaAssets';
 import { saveOrderToSupabase } from '../services/orderService';
 import {
   BlogArticle,
   BottleVolume,
   CartItem,
+  CategoryRecord,
   CodPaymentOption,
   CustomerDetails,
   FragranceCategory,
   OrderRecord,
   PageRoute,
   Product,
+  WebsiteContent,
 } from '../types';
 
 interface ToastMessage {
@@ -18,11 +29,26 @@ interface ToastMessage {
   message: string;
 }
 
+interface PublicStoreSettings {
+  storeName: string;
+  storeEmail: string;
+  storePhone: string;
+  currency: 'INR';
+  codEnabled: boolean;
+  codFee: number;
+  freeShippingThreshold: number;
+  standardShippingFee: number;
+}
+
 interface StoreContextValue {
   route: PageRoute;
   selectedProductSlug: string;
   shopCategoryFilter: FragranceCategory | 'All';
   shopSearchQuery: string;
+  products: Product[];
+  categories: CategoryRecord[];
+  websiteContent: WebsiteContent;
+  publicSettings: PublicStoreSettings;
   cart: CartItem[];
   wishlist: string[];
   isCartOpen: boolean;
@@ -57,6 +83,7 @@ interface StoreContextValue {
   setQuickViewProduct: (product: Product | null) => void;
   setActiveArticle: (article: BlogArticle | null) => void;
   placeOrder: (customer: CustomerDetails, paymentMethod?: CodPaymentOption) => Promise<OrderRecord>;
+  refreshStorefront: () => Promise<void>;
   notify: (message: string) => void;
 }
 
@@ -66,16 +93,125 @@ const CART_STORAGE_KEY = 'velora_cart_v1';
 const WISHLIST_STORAGE_KEY = 'velora_wishlist_v1';
 const ORDER_STORAGE_KEY = 'velora_last_order_v1';
 
+const ROUTE_TO_PATH: Record<PageRoute, string> = {
+  home: '/',
+  shop: '/shop',
+  product: '/product',
+  about: '/about',
+  blog: '/blog',
+  contact: '/contact',
+  checkout: '/checkout',
+  confirmation: '/confirmation',
+  wishlist: '/wishlist',
+  'admin-login': '/admin/login',
+  'admin-dashboard': '/admin/dashboard',
+  'admin-analytics': '/admin/analytics',
+  'admin-orders': '/admin/orders',
+  'admin-products': '/admin/products',
+  'admin-categories': '/admin/categories',
+  'admin-inventory': '/admin/inventory',
+  'admin-customers': '/admin/customers',
+  'admin-employees': '/admin/employees',
+  'admin-attendance': '/admin/attendance',
+  'admin-tasks': '/admin/tasks',
+  'admin-website': '/admin/website',
+  'admin-reports': '/admin/reports',
+  'admin-notifications': '/admin/notifications',
+  'admin-settings': '/admin/settings',
+  'employee-login': '/employee/login',
+  'employee-dashboard': '/employee/dashboard',
+  'employee-profile': '/employee/profile',
+  'employee-attendance': '/employee/attendance',
+  'employee-tasks': '/employee/tasks',
+  'employee-orders': '/employee/orders',
+  'employee-support': '/employee/support',
+  'employee-inventory': '/employee/inventory',
+  'employee-leave': '/employee/leave',
+  'employee-notifications': '/employee/notifications',
+};
+
+export function parseLocationToRoute(pathname: string): {
+  route: PageRoute;
+  productSlug?: string;
+} {
+  const clean = pathname.replace(/\/+$/, '') || '/';
+  if (clean.startsWith('/product/')) {
+    return { route: 'product', productSlug: clean.slice('/product/'.length) };
+  }
+  const entries = Object.entries(ROUTE_TO_PATH) as [PageRoute, string][];
+  for (const [r, p] of entries) {
+    if (p === clean) return { route: r };
+  }
+  if (clean === '/admin') return { route: 'admin-dashboard' };
+  if (clean === '/employee') return { route: 'employee-dashboard' };
+  return { route: 'home' };
+}
+
+const DEFAULT_WEBSITE_CONTENT: WebsiteContent = {
+  announcementBar: 'Complimentary Shipping Above ₹2,500',
+  heroEyebrow: 'DISCOVER YOUR SIGNATURE SCENT',
+  heroHeading: 'Discover the World of VELORA',
+  heroSubtitle:
+    "Luxury is not just what you wear. It's the fragrance you leave behind. Every numbered VELORA flacon holds a timeless olfactory signature designed to linger gracefully from morning light until midnight.",
+  heroImage: 'asset:hero',
+  brandStoryEyebrow: 'Every Scent Tells a Story',
+  brandStoryHeading: 'Welcome to VELORA – Where Every Fragrance Becomes a Memory.',
+  brandStoryBody:
+    "At VELORA, we believe fragrance is more than a scent. It is an expression of personality, elegance and individuality. Born between classic European flower houses and India's richest botanical estates, we distill without haste until every accord achieves effortless harmony.",
+  promoBannerEyebrow: 'Limited Seasonal Reserve',
+  promoBannerHeading: 'Sweet Aromas of Elegance',
+  promoBannerText:
+    'Discover golden saffron, sun-drenched marigold, and aged Madagascar vanilla distilled for evening rituals. Enjoy complimentary artisan gift wrapping on all 50ml and 100ml flacons.',
+  promoBannerImage: 'asset:campaign',
+  newsletterHeading: 'Stay in the World of VELORA',
+  footerDescription:
+    'VELORA brings you an exclusive fragrance experience crafted for those who appreciate elegance, luxury and individuality.',
+  contactEmail: 'concierge@velorafragrances.in',
+  contactPhone: '+91 22 4890 3172',
+  boutiqueAddress: '14 Kala Ghoda Precinct, Fort, Mumbai 400001',
+  boutiqueHours: 'Mon – Sat · 10:00 – 20:00 IST',
+  testimonials: TESTIMONIALS,
+  blogArticles: BLOG_ARTICLES,
+};
+
+const DEFAULT_PUBLIC_SETTINGS: PublicStoreSettings = {
+  storeName: 'VELORA Parfums India',
+  storeEmail: 'concierge@velorafragrances.in',
+  storePhone: '+91 22 4890 3172',
+  currency: 'INR',
+  codEnabled: true,
+  codFee: 0,
+  freeShippingThreshold: 2500,
+  standardShippingFee: 149,
+};
+
+function hydrateProductMedia(prod: Product): Product {
+  return {
+    ...prod,
+    image: resolveMediaUrl(prod.image),
+    gallery: (prod.gallery || [prod.image]).map((img) => resolveMediaUrl(img)),
+  };
+}
+
 export function getVolumePrice(product: Product, volume: BottleVolume): number {
   const found = product.volumes.find((v) => v.volume === volume);
   return found ? found.price : product.price;
 }
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [route, setRoute] = useState<PageRoute>('home');
-  const [selectedProductSlug, setSelectedProductSlug] = useState<string>(PRODUCTS[0].slug);
+  const initialParsed = useMemo(() => parseLocationToRoute(window.location.pathname), []);
+  const [route, setRoute] = useState<PageRoute>(initialParsed.route);
+  const [selectedProductSlug, setSelectedProductSlug] = useState<string>(
+    initialParsed.productSlug || DEFAULT_PRODUCTS[0].slug
+  );
   const [shopCategoryFilter, setShopCategoryFilter] = useState<FragranceCategory | 'All'>('All');
   const [shopSearchQuery, setShopSearchQuery] = useState<string>('');
+  const [products, setProducts] = useState<Product[]>(DEFAULT_PRODUCTS);
+  const [categories, setCategories] = useState<CategoryRecord[]>([]);
+  const [websiteContent, setWebsiteContent] = useState<WebsiteContent>(DEFAULT_WEBSITE_CONTENT);
+  const [publicSettings, setPublicSettings] =
+    useState<PublicStoreSettings>(DEFAULT_PUBLIC_SETTINGS);
+
   const [isCartOpen, setCartOpen] = useState(false);
   const [isSearchOpen, setSearchOpen] = useState(false);
   const [isFilmOpen, setFilmOpen] = useState(false);
@@ -83,6 +219,75 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [activeArticle, setActiveArticle] = useState<BlogArticle | null>(null);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
   const pendingSectionRef = useRef<string | null>(null);
+
+  const refreshStorefront = useCallback(async () => {
+    try {
+      const res = await fetch('/api/storefront/bootstrap');
+      if (!res.ok) return;
+      const data = await res.json();
+      if (Array.isArray(data.products) && data.products.length > 0) {
+        setProducts(data.products.map(hydrateProductMedia));
+      }
+      if (Array.isArray(data.categories)) {
+        setCategories(data.categories);
+      }
+      if (data.websiteContent) {
+        setWebsiteContent({
+          ...DEFAULT_WEBSITE_CONTENT,
+          ...data.websiteContent,
+          heroImage: resolveMediaUrl(data.websiteContent.heroImage),
+          promoBannerImage: resolveMediaUrl(data.websiteContent.promoBannerImage),
+          testimonials: (data.websiteContent.testimonials || TESTIMONIALS).map(
+            (t: WebsiteContent['testimonials'][number]) => ({
+              ...t,
+              avatarImage: resolveMediaUrl(t.avatarImage),
+            })
+          ),
+          blogArticles: (data.websiteContent.blogArticles || BLOG_ARTICLES).map(
+            (a: BlogArticle) => ({
+              ...a,
+              image: resolveMediaUrl(a.image),
+            })
+          ),
+        });
+      }
+      if (data.publicSettings) {
+        setPublicSettings(data.publicSettings);
+      }
+    } catch {
+      // fallback gracefully to bundled catalog
+    }
+  }, []);
+
+  useEffect(() => {
+    void refreshStorefront();
+
+    let evtSource: EventSource | null = null;
+    try {
+      evtSource = new EventSource('/api/events');
+      evtSource.addEventListener('storefront_updated', () => {
+        void refreshStorefront();
+      });
+    } catch {
+      // ignore SSE errors if unavailable
+    }
+    return () => {
+      evtSource?.close();
+    };
+  }, [refreshStorefront]);
+
+  // Browser back/forward popstate support
+  useEffect(() => {
+    const onPopState = () => {
+      const parsed = parseLocationToRoute(window.location.pathname);
+      setRoute(parsed.route);
+      if (parsed.productSlug) {
+        setSelectedProductSlug(parsed.productSlug);
+      }
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
 
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
@@ -146,7 +351,6 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   }, [lastOrder]);
 
-  // Execute pending section scroll reliably after AnimatePresence route transition finishes
   useEffect(() => {
     if (route !== 'home' || !pendingSectionRef.current) return;
     const sectionId = pendingSectionRef.current;
@@ -197,6 +401,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setActiveArticle(null);
     setFilmOpen(false);
 
+    const targetPath =
+      to === 'product'
+        ? `/product/${options?.productSlug || selectedProductSlug}`
+        : ROUTE_TO_PATH[to] || '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
+
     if (options?.scrollToSection && to === 'home') {
       if (route === 'home') {
         window.setTimeout(() => {
@@ -222,7 +434,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     quantity = 1,
     openDrawer = true
   ) => {
-    const product = PRODUCTS.find((p) => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     if (!product) return;
 
     let hitLimit = false;
@@ -254,7 +466,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   };
 
   const removeFromCart = (productId: string, volume: BottleVolume) => {
-    const product = PRODUCTS.find((p) => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     setCart((prev) =>
       prev.filter((item) => !(item.productId === productId && item.volume === volume))
     );
@@ -280,7 +492,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearCart = () => setCart([]);
 
   const toggleWishlist = (productId: string) => {
-    const product = PRODUCTS.find((p) => p.id === productId);
+    const product = products.find((p) => p.id === productId);
     setWishlist((prev) => {
       const exists = prev.includes(productId);
       if (exists) {
@@ -302,11 +514,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const cartSubtotal = useMemo(
     () =>
       cart.reduce((acc, item) => {
-        const product = PRODUCTS.find((p) => p.id === item.productId);
+        const product = products.find((p) => p.id === item.productId);
         if (!product) return acc;
         return acc + getVolumePrice(product, item.volume) * item.quantity;
       }, 0),
-    [cart]
+    [cart, products]
   );
 
   const placeOrder = async (
@@ -315,7 +527,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   ): Promise<OrderRecord> => {
     const items = cart
       .map((item) => {
-        const product = PRODUCTS.find((p) => p.id === item.productId);
+        const product = products.find((p) => p.id === item.productId);
         if (!product) return null;
         return {
           productId: product.id,
@@ -329,7 +541,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
     const subtotal = items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-    const shippingFee = subtotal >= 2500 || subtotal === 0 ? 0 : 149;
+    const shippingFee =
+      subtotal >= publicSettings.freeShippingThreshold || subtotal === 0
+        ? 0
+        : publicSettings.standardShippingFee;
     const orderNumber = `VL-${Math.floor(100000 + Math.random() * 900000)}`;
     const deliveryDate = new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
     const estimatedDelivery = deliveryDate.toLocaleDateString('en-IN', {
@@ -350,12 +565,31 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       estimatedDelivery,
     };
 
-    await saveOrderToSupabase(record);
+    // Persist to VELORA full-stack backend database (creates customer, updates inventory, notifies staff)
+    const apiRes = await fetch('/api/storefront/orders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderNumber,
+        customer,
+        items: cart,
+        paymentMethod,
+        estimatedDelivery,
+      }),
+    });
+    const apiJson = await apiRes.json().catch(() => ({}));
+    if (!apiRes.ok) {
+      throw new Error(apiJson.error || 'Unable to place your order right now.');
+    }
+
+    // Also mirror to Supabase when configured
+    await saveOrderToSupabase(record).catch((err) => {
+      console.warn('Supabase mirror skipped or failed:', err);
+    });
 
     setLastOrder(record);
     setCart([]);
-    setRoute('confirmation');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    navigate('confirmation');
     return record;
   };
 
@@ -366,6 +600,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         selectedProductSlug,
         shopCategoryFilter,
         shopSearchQuery,
+        products,
+        categories,
+        websiteContent,
+        publicSettings,
         cart,
         wishlist,
         isCartOpen,
@@ -392,6 +630,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         setQuickViewProduct,
         setActiveArticle,
         placeOrder,
+        refreshStorefront,
         notify,
       }}
     >

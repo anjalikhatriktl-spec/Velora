@@ -39,6 +39,7 @@ export const Navbar: React.FC = () => {
     wishlist,
     setCartOpen,
     setSearchOpen,
+    websiteContent,
   } = useStore();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
@@ -90,27 +91,27 @@ export const Navbar: React.FC = () => {
         <div className="max-w-7xl mx-auto px-6 lg:px-10 h-9 flex items-center justify-between text-[11px] tracking-wider">
           <div className="flex items-center gap-6">
             <a
-              href="mailto:concierge@velorafragrances.in"
+              href={`mailto:${websiteContent.contactEmail}`}
               className="inline-flex items-center gap-1.5 hover:text-[#B8935A] transition-colors whitespace-nowrap"
             >
               <Mail className="w-3 h-3 text-[#B8935A]" />
-              concierge@velorafragrances.in
+              {websiteContent.contactEmail}
             </a>
             <a
-              href="tel:+912248903172"
+              href={`tel:${websiteContent.contactPhone.replace(/\s+/g, '')}`}
               className="inline-flex items-center gap-1.5 hover:text-[#B8935A] transition-colors whitespace-nowrap tabular-nums"
             >
               <Phone className="w-3 h-3 text-[#B8935A]" />
-              +91 22 4890 3172
+              {websiteContent.contactPhone}
             </a>
           </div>
           <div className="flex items-center gap-6">
             <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
               <Clock className="w-3 h-3 text-[#B8935A]" />
-              Mon – Sat · 10:00 – 20:00 IST
+              {websiteContent.boutiqueHours}
             </span>
             <span className="text-[#B8935A] whitespace-nowrap">
-              Complimentary Shipping Above ₹2,500
+              {websiteContent.announcementBar}
             </span>
           </div>
         </div>
@@ -281,9 +282,9 @@ export const Navbar: React.FC = () => {
 
               <div className="pt-6 mt-6 border-t border-[#E6DDD1] space-y-2 text-xs text-[#6E655E]">
                 <p className="text-[#181614] font-medium">VELORA Concierge</p>
-                <p>concierge@velorafragrances.in</p>
-                <p>+91 22 4890 3172</p>
-                <p>Mon – Sat · 10:00 – 20:00 IST</p>
+                <p>{websiteContent.contactEmail}</p>
+                <p>{websiteContent.contactPhone}</p>
+                <p>{websiteContent.boutiqueHours}</p>
               </div>
             </motion.aside>
           </>

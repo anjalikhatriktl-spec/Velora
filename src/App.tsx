@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnimatePresence, motion, MotionConfig } from 'motion/react';
+import { AuthProvider } from './context/AuthContext';
 import { StoreProvider, useStore } from './context/StoreContext';
 import { LUXURY_EASE, PagePreloader } from './components/MotionPrimitives';
 import { Navbar } from './components/Navbar';
@@ -21,11 +22,48 @@ import {
   ContactPage,
   WishlistPage,
 } from './pages/SecondaryPages';
+import { PortalLoginPage } from './pages/auth/PortalLoginPages';
+import { AdminLayout } from './pages/admin/AdminLayout';
+import { EmployeeLayout } from './pages/employee/EmployeeLayout';
 
 const AppRouter: React.FC = () => {
   const { route } = useStore();
 
-  const renderPage = () => {
+  // Standalone Portal Login & Dashboard Routes (no storefront header/footer)
+  if (route === 'admin-login') {
+    return (
+      <>
+        <PortalLoginPage portal="admin" />
+        <ModalsAndToasts />
+      </>
+    );
+  }
+  if (route === 'employee-login') {
+    return (
+      <>
+        <PortalLoginPage portal="employee" />
+        <ModalsAndToasts />
+      </>
+    );
+  }
+  if (route.startsWith('admin-')) {
+    return (
+      <>
+        <AdminLayout />
+        <ModalsAndToasts />
+      </>
+    );
+  }
+  if (route.startsWith('employee-')) {
+    return (
+      <>
+        <EmployeeLayout />
+        <ModalsAndToasts />
+      </>
+    );
+  }
+
+  const renderStorefrontPage = () => {
     switch (route) {
       case 'home':
         return <HomePage />;
@@ -63,7 +101,7 @@ const AppRouter: React.FC = () => {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25, ease: LUXURY_EASE }}
           >
-            {renderPage()}
+            {renderStorefrontPage()}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -79,9 +117,11 @@ const AppRouter: React.FC = () => {
 export default function App() {
   return (
     <MotionConfig reducedMotion="user">
-      <StoreProvider>
-        <AppRouter />
-      </StoreProvider>
+      <AuthProvider>
+        <StoreProvider>
+          <AppRouter />
+        </StoreProvider>
+      </AuthProvider>
     </MotionConfig>
   );
 }

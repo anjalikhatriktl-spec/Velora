@@ -15,7 +15,7 @@ import {
 } from '../MotionPrimitives';
 
 export const HeroAndBrandSections: React.FC = () => {
-  const { navigate, setFilmOpen } = useStore();
+  const { navigate, setFilmOpen, websiteContent } = useStore();
 
   return (
     <>
@@ -33,7 +33,7 @@ export const HeroAndBrandSections: React.FC = () => {
               >
                 <span className="h-[1px] w-7 sm:w-8 bg-[#B8935A]" aria-hidden="true" />
                 <p className="text-[11px] tracking-[0.26em] sm:tracking-[0.3em] uppercase text-[#9A7742] font-medium">
-                  DISCOVER YOUR SIGNATURE SCENT
+                  {websiteContent.heroEyebrow}
                 </p>
               </motion.div>
 
@@ -43,7 +43,7 @@ export const HeroAndBrandSections: React.FC = () => {
                 transition={{ duration: 0.8, delay: 0.08, ease: LUXURY_EASE }}
                 className="font-serif text-[40px] sm:text-6xl lg:text-[72px] leading-[1.04] font-normal text-[#181614] text-balance"
               >
-                Discover the World of <em className="italic font-normal text-[#9A7742]">VELORA</em>
+                {websiteContent.heroHeading}
               </motion.h1>
 
               <motion.p
@@ -52,9 +52,7 @@ export const HeroAndBrandSections: React.FC = () => {
                 transition={{ duration: 0.75, delay: 0.16, ease: LUXURY_EASE }}
                 className="text-sm sm:text-lg text-[#6E655E] leading-[1.7] max-w-xl"
               >
-                Luxury is not just what you wear. It&rsquo;s the fragrance you leave behind. Every
-                numbered VELORA flacon holds a timeless olfactory signature designed to linger
-                gracefully from morning light until midnight.
+                {websiteContent.heroSubtitle}
               </motion.p>
 
               <motion.div
@@ -128,7 +126,7 @@ export const HeroAndBrandSections: React.FC = () => {
                   className="w-full h-full"
                 >
                   <SafeImage
-                    src={BRAND_MEDIA.hero}
+                    src={websiteContent.heroImage || BRAND_MEDIA.hero}
                     alt="VELORA crystal luxury perfume bottle and ivory packaging box on warm travertine stone"
                     className="w-full h-full object-cover object-center transition-transform duration-1000 ease-out group-hover:scale-105"
                   />
@@ -185,18 +183,14 @@ export const HeroAndBrandSections: React.FC = () => {
                 <div className="flex items-center gap-3">
                   <span className="h-[1px] w-7 bg-[#B8935A]" aria-hidden="true" />
                   <p className="text-[11px] tracking-[0.26em] uppercase text-[#9A7742] font-medium">
-                    Every Scent Tells a Story
+                    {websiteContent.brandStoryEyebrow}
                   </p>
                 </div>
                 <h2 className="font-serif text-3xl sm:text-5xl lg:text-[50px] font-normal text-[#181614] leading-[1.08] text-balance">
-                  Welcome to <em className="italic font-normal text-[#9A7742]">VELORA</em> – Where
-                  Every Fragrance Becomes a Memory.
+                  {websiteContent.brandStoryHeading}
                 </h2>
                 <p className="text-sm sm:text-base text-[#6E655E] leading-[1.7] max-w-2xl">
-                  At VELORA, we believe fragrance is more than a scent. It is an expression of
-                  personality, elegance and individuality. Born between classic European flower
-                  houses and India&rsquo;s richest botanical estates, we distill without haste
-                  until every accord achieves effortless harmony.
+                  {websiteContent.brandStoryBody}
                 </p>
               </FadeUp>
 

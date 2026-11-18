@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { ArrowRight, Heart } from 'lucide-react';
-import { BLOG_ARTICLES, BRAND_MEDIA, INGREDIENTS, PRODUCTS } from '../data/catalog';
+import { BRAND_MEDIA, INGREDIENTS } from '../data/catalog';
 import { useStore } from '../context/StoreContext';
 import { SafeImage } from '../components/SafeImage';
 import { ProductCard } from '../components/ProductCard';
@@ -8,21 +8,20 @@ import { TestimonialsContactBlogSections } from '../components/home/Testimonials
 import { FadeUp } from '../components/MotionPrimitives';
 
 export const AboutPage: React.FC = () => {
-  const { navigate } = useStore();
+  const { navigate, websiteContent } = useStore();
   return (
     <div className="bg-[#FAF8F4] min-h-screen py-10 sm:py-14 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 space-y-12 sm:space-y-20">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center">
           <FadeUp className="lg:col-span-6 space-y-5 sm:space-y-6">
             <p className="text-xs tracking-[0.24em] uppercase text-[#9A7742] font-medium">
-              Every Scent Tells a Story
+              {websiteContent.brandStoryEyebrow}
             </p>
             <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl font-normal text-[#181614] leading-[1.08]">
-              Welcome to VELORA – Where Every Fragrance Becomes a Memory.
+              {websiteContent.brandStoryHeading}
             </h1>
             <p className="text-sm sm:text-base text-[#2B2623] leading-relaxed">
-              At VELORA, we believe fragrance is more than a scent. It is an expression of
-              personality, elegance and individuality.
+              {websiteContent.brandStoryBody}
             </p>
             <p className="text-sm text-[#6E655E] leading-relaxed">
               Each batch rests ninety days in cool limestone cellars, letting Calabrian citrus,
@@ -64,7 +63,7 @@ export const AboutPage: React.FC = () => {
 };
 
 export const BlogPage: React.FC = () => {
-  const { setActiveArticle } = useStore();
+  const { setActiveArticle, websiteContent } = useStore();
   return (
     <div className="bg-[#FAF8F4] min-h-screen py-10 sm:py-14 lg:py-24">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10">
@@ -82,7 +81,7 @@ export const BlogPage: React.FC = () => {
         </FadeUp>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {BLOG_ARTICLES.map((article) => (
+          {websiteContent.blogArticles.map((article) => (
             <article
               key={article.id}
               className="group bg-white border border-[#E6DDD1] flex flex-col overflow-hidden"
@@ -138,10 +137,10 @@ export const ContactPage: React.FC = () => {
 };
 
 export const WishlistPage: React.FC = () => {
-  const { wishlist, navigate } = useStore();
+  const { products, wishlist, navigate } = useStore();
   const savedProducts = useMemo(
-    () => PRODUCTS.filter((p) => wishlist.includes(p.id)),
-    [wishlist]
+    () => products.filter((p) => wishlist.includes(p.id)),
+    [products, wishlist]
   );
 
   return (

@@ -10,7 +10,7 @@ import {
   Star,
   Truck,
 } from 'lucide-react';
-import { formatINR, PRODUCTS } from '../data/catalog';
+import { formatINR } from '../data/catalog';
 import { useStore } from '../context/StoreContext';
 import { BottleVolume } from '../types';
 import { SafeImage } from '../components/SafeImage';
@@ -18,6 +18,7 @@ import { ProductCard } from '../components/ProductCard';
 
 export const ProductDetailsPage: React.FC = () => {
   const {
+    products,
     selectedProductSlug,
     navigate,
     addToCart,
@@ -26,8 +27,8 @@ export const ProductDetailsPage: React.FC = () => {
   } = useStore();
 
   const product = useMemo(
-    () => PRODUCTS.find((p) => p.slug === selectedProductSlug) ?? PRODUCTS[0],
-    [selectedProductSlug]
+    () => products.find((p) => p.slug === selectedProductSlug) ?? products[0],
+    [products, selectedProductSlug]
   );
 
   const [activeImageIdx, setActiveImageIdx] = useState(0);
@@ -38,7 +39,7 @@ export const ProductDetailsPage: React.FC = () => {
     setActiveImageIdx(0);
     setSelectedVolume('50ml');
     setQuantity(1);
-  }, [product.id]);
+  }, [product?.id]);
 
   const activeVolumeObj =
     product.volumes.find((v) => v.volume === selectedVolume) ??
@@ -46,8 +47,8 @@ export const ProductDetailsPage: React.FC = () => {
     product.volumes[0];
 
   const relatedProducts = useMemo(
-    () => PRODUCTS.filter((p) => p.id !== product.id).slice(0, 3),
-    [product.id]
+    () => products.filter((p) => p.id !== product.id && p.published !== false).slice(0, 3),
+    [products, product.id]
   );
 
   const wishlisted = isWishlisted(product.id);

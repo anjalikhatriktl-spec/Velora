@@ -7,7 +7,7 @@ import {
   Star,
 } from 'lucide-react';
 import { AnimatePresence, motion, useScroll, useTransform } from 'motion/react';
-import { BRAND_MEDIA, formatINR, GALLERY_ITEMS, PRODUCTS } from '../../data/catalog';
+import { formatINR, GALLERY_ITEMS } from '../../data/catalog';
 import { useStore } from '../../context/StoreContext';
 import { FragranceCategory } from '../../types';
 import { SafeImage } from '../SafeImage';
@@ -37,21 +37,29 @@ const carouselVariants = {
 };
 
 export const CollectionAndGallerySections: React.FC = () => {
-  const { navigate, addToCart } = useStore();
-  const carouselProducts = useMemo(() => PRODUCTS.filter((p) => p.inCollectionCarousel), []);
+  const { navigate, addToCart, products, websiteContent } = useStore();
+  const carouselProducts = useMemo(() => {
+    const active = products.filter((p) => p.published !== false);
+    const inCarousel = active.filter((p) => p.inCollectionCarousel);
+    return inCarousel.length > 0 ? inCarousel : active;
+  }, [products]);
   const [[slideIndex, direction], setSlideState] = useState<[number, number]>([0, 1]);
   const [galleryCategory, setGalleryCategory] = useState<FragranceCategory | 'All'>('All');
 
   const visibleSlides = useMemo(() => {
     const count = carouselProducts.length;
-    return [0, 1, 2].map((offset) => carouselProducts[(slideIndex + offset) % count]);
+    if (count === 0) return [];
+    const safeIdx = slideIndex % count;
+    return [0, 1, 2].map((offset) => carouselProducts[(safeIdx + offset) % count]);
   }, [carouselProducts, slideIndex]);
 
   const handlePrev = () => {
+    if (carouselProducts.length === 0) return;
     setSlideState(([prev]) => [(prev - 1 + carouselProducts.length) % carouselProducts.length, -1]);
   };
 
   const handleNext = () => {
+    if (carouselProducts.length === 0) return;
     setSlideState(([prev]) => [(prev + 1) % carouselProducts.length, 1]);
   };
 
@@ -274,7 +282,7 @@ export const CollectionAndGallerySections: React.FC = () => {
           >
             <AnimatePresence mode="popLayout">
               {filteredGallery.map((item) => {
-                const linkedProduct = PRODUCTS.find((p) => p.id === item.productId);
+                const linkedProduct = products.find((p) => p.id === item.productId);
                 return (
                   <motion.div
                     layout
@@ -289,7 +297,7 @@ export const CollectionAndGallerySections: React.FC = () => {
                       type="button"
                       onClick={() =>
                         navigate('product', {
-                          productSlug: linkedProduct?.slug || PRODUCTS[0].slug,
+                          productSlug: linkedProduct?.slug || products[0]?.slug || '',
                         })
                       }
                       className="relative block w-full aspect-[3/4] overflow-hidden text-left"
@@ -332,7 +340,7 @@ export const CollectionAndGallerySections: React.FC = () => {
           className="absolute inset-0 -top-14 -bottom-14 pointer-events-none will-change-transform"
         >
           <SafeImage
-            src={BRAND_MEDIA.campaign}
+            src={websiteContent.promoBannerImage}
             alt="VELORA luxury glass perfume bottles under stone arches at sunset"
             className="w-full h-full object-cover object-center opacity-55"
           />
@@ -350,7 +358,7 @@ export const CollectionAndGallerySections: React.FC = () => {
             >
               <span className="h-[1px] w-7 sm:w-8 bg-[#B8935A]" aria-hidden="true" />
               <p className="text-[11px] tracking-[0.26em] uppercase text-[#B8935A]">
-                Limited Seasonal Reserve
+                {websiteContent.promoBannerEyebrow}
               </p>
             </motion.div>
             <motion.h2
@@ -360,7 +368,7 @@ export const CollectionAndGallerySections: React.FC = () => {
               transition={{ duration: 0.75, delay: 0.08, ease: LUXURY_EASE }}
               className="font-serif text-3xl sm:text-5xl lg:text-6xl font-normal text-white leading-[1.08] text-balance"
             >
-              Sweet Aromas of <em className="italic font-normal text-[#E6DDD1]">Elegance</em>
+              {websiteContent.promoBannerHeading}
             </motion.h2>
             <motion.p
               initial={{ opacity: 0, y: 18 }}
@@ -369,9 +377,7 @@ export const CollectionAndGallerySections: React.FC = () => {
               transition={{ duration: 0.75, delay: 0.16, ease: LUXURY_EASE }}
               className="text-sm sm:text-base text-[#E6DDD1] leading-[1.7]"
             >
-              Discover golden saffron, sun-drenched marigold, and aged Madagascar vanilla distilled
-              for evening rituals. Enjoy complimentary artisan gift wrapping on all 50ml and 100ml
-              flacons.
+              {websiteContent.promoBannerText}
             </motion.p>
             <motion.div
               initial={{ opacity: 0, y: 16 }}
